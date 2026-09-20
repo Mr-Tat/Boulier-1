@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <meta name="theme-color" content="#f4f1ea" />
-  <title>Boulier pédagogique 0–100 · v20</title>
+  <title>Boulier pédagogique 0–100 · v34</title>
   <style>
     :root{
       --paper:#f4f1ea;
@@ -499,6 +499,7 @@
       overflow:hidden;
     }
     .abacus-frame{
+      position:relative;
       height:100%;
       min-height:400px;
       overflow-y:auto;
@@ -540,6 +541,8 @@
       box-shadow:0 4px 8px rgba(66,38,18,.18);
     }
     .row-inner{
+      --bead-size:clamp(24px,3.85vw,48px);
+      --bead-gap:clamp(3px,.48vw,7px);
       height:100%;
       position:relative;
       display:flex;
@@ -555,18 +558,34 @@
       background:linear-gradient(#dfe2e7,#8d949d 45%,#f3f4f6 56%,#949aa3);
       box-shadow:0 2px 3px rgba(0,0,0,.16);
     }
+    .five-guide-global{
+      position:absolute;
+      top:0;
+      left:0;
+      width:5px;
+      height:0;
+      transform:translateX(-50%);
+      border-radius:999px;
+      background:linear-gradient(180deg,rgba(166,139,111,.20),rgba(151,119,88,.48),rgba(166,139,111,.20));
+      box-shadow:0 0 0 1px rgba(255,248,237,.18);
+      opacity:0;
+      transition:opacity .14s ease,height .14s ease,top .14s ease;
+      pointer-events:none;
+      z-index:3;
+    }
+    .abacus-frame.show-five-guide .five-guide-global{opacity:.84}
     .beads{
       width:100%;
       display:flex;
       align-items:center;
-      gap:clamp(3px,.48vw,7px);
+      gap:var(--bead-gap);
       position:relative;
       z-index:2;
       min-width:0;
     }
     .bead{
-      flex:0 0 clamp(24px,3.85vw,48px);
-      width:clamp(24px,3.85vw,48px);
+      flex:0 0 var(--bead-size);
+      width:var(--bead-size);
       aspect-ratio:1/1;
       border-radius:50%;
       border:1px solid rgba(12,18,25,.28);
@@ -583,7 +602,7 @@
         inset -7px -9px 11px rgba(0,0,0,.24),
         inset 5px 5px 8px rgba(255,255,255,.23),
         0 4px 6px rgba(0,0,0,.21);
-      opacity:.14;
+      opacity:.22;
       transform:scale(.83);
       transition:transform .16s ease,opacity .12s ease,filter .12s ease,outline-color .12s ease,margin-left .18s ease;
       touch-action:pan-y;
@@ -684,11 +703,23 @@
     }
 
     .bead.active{opacity:1;transform:scale(1);filter:saturate(1.14)}
+
+    /* Animation unique : une copie visuelle de la boule glisse simplement
+       de son ancien groupe vers le nouveau, le long de la barre. */
+    .bead-slide-ghost{
+      position:fixed !important;
+      margin:0 !important;
+      pointer-events:none !important;
+      z-index:9999 !important;
+      transition:none !important;
+      transform-origin:50% 50% !important;
+      will-change:transform,opacity;
+    }
     /* En calcul, les boules qui ne faisaient pas partie du nombre de départ
        restent petites. Elles retrouvent leur taille normale uniquement si
        elles sont réellement ajoutées. */
     .bead.not-base{
-      opacity:.11;
+      opacity:.18;
       transform:scale(.61);
       filter:saturate(.72) brightness(.92);
     }
@@ -1033,7 +1064,7 @@
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="title">Boulier 0–100 <span class="version-badge">v20</span></div>
+    <div class="title">Boulier 0–100 <span class="version-badge">v34</span></div>
     <div class="top-actions">
       <button
         class="number-visibility-button"
@@ -1130,7 +1161,7 @@
     </aside>
 
     <section class="abacus-card">
-      <div class="abacus-frame" id="abacus" aria-label="Boulier de 0 à 100"></div>
+      <div class="abacus-frame" id="abacus" aria-label="Boulier de 0 à 100"><div class="five-guide-global" id="fiveGuide" aria-hidden="true"></div></div>
     </section>
 
     <section class="units-panel" aria-label="Contrôle des unités">
@@ -1160,6 +1191,8 @@
   "use strict";
 
   const abacus = document.getElementById("abacus");
+  let fiveGuide = null;
+  let fiveGuideX = null;
   const slate = document.getElementById("slate");
   const slateLabel = document.getElementById("slateLabel");
   const numberDisplay = document.getElementById("numberDisplay");
@@ -1197,6 +1230,7 @@
   // Il ne se déplace que lorsque la valeur sort de la ligne centrale et de
   // ses deux voisines, afin de garder lisible un passage de dizaine.
   let focusFollowValue = null;
+  let lastRenderedVisible = null;
 
   const hues = [2,27,49,92,150,184,215,248,290,332];
 
@@ -1217,7 +1251,7 @@
   }
 
   function buildAbacus(){
-    abacus.innerHTML = "";
+    abacus.innerHTML = '<div class="five-guide-global" id="fiveGuide" aria-hidden="true"></div>';
     for(let decade=10; decade>=1; decade--){
       const row = document.createElement("div");
       row.className = "row";
@@ -1401,8 +1435,133 @@
     operationExpression.setAttribute("aria-label",calculationText());
   }
 
+  function updateFiveGuide(visible){
+    fiveGuide = abacus.querySelector(".five-guide-global");
+    if(!fiveGuide || visible <= 0){
+      abacus.classList.remove("show-five-guide");
+      return;
+    }
+
+    const activeRows = [...abacus.querySelectorAll(".row")].filter(row => {
+      const decade = Number(row.dataset.decade);
+      const rowBase = (decade-1)*10;
+      return clamp(Math.round(visible-rowBase),0,10) > 0;
+    });
+    if(!activeRows.length){
+      abacus.classList.remove("show-five-guide");
+      return;
+    }
+
+    // Position horizontale FIXE : elle est définie une seule fois à partir
+    // de la géométrie théorique de la rangée 00, comme si ses 10 boules
+    // étaient rangées normalement à gauche. Elle ne dépend donc jamais du
+    // nombre de boules actives/inactives ni de leur regroupement à droite.
+    if(fiveGuideX === null){
+      const referenceRow = abacus.querySelector('[data-decade="1"]');
+      const beadStrip = referenceRow?.querySelector(".beads");
+      const firstBead = beadStrip?.querySelector(".bead");
+      if(!referenceRow || !beadStrip || !firstBead){
+        abacus.classList.remove("show-five-guide");
+        return;
+      }
+      const frameRect = abacus.getBoundingClientRect();
+      const stripRect = beadStrip.getBoundingClientRect();
+      const beadStyle = getComputedStyle(firstBead);
+      const stripStyle = getComputedStyle(beadStrip);
+      const beadWidth = parseFloat(beadStyle.width) || firstBead.offsetWidth;
+      const gap = parseFloat(stripStyle.columnGap || stripStyle.gap) || 0;
+      fiveGuideX = (stripRect.left - frameRect.left + abacus.scrollLeft)
+        + beadWidth * 5 + gap * 4.5;
+    }
+    const x = fiveGuideX;
+
+    // Verticalement, la ligne ne couvre que les rangées ayant au moins
+    // une unité active : de la rangée active la plus haute jusqu'à 00.
+    const highest = activeRows[0];
+    const lowest = activeRows[activeRows.length-1];
+    const top = highest.offsetTop + 5;
+    const bottom = lowest.offsetTop + lowest.offsetHeight - 5;
+
+    fiveGuide.style.left = `${x}px`;
+    fiveGuide.style.top = `${top}px`;
+    fiveGuide.style.height = `${Math.max(0,bottom-top)}px`;
+    abacus.classList.add("show-five-guide");
+  }
+
+  function cleanBeadSlide(bead){
+    if(bead._slideAnimation){
+      try{ bead._slideAnimation.cancel(); }catch(_){}
+      bead._slideAnimation=null;
+    }
+    if(bead._slideGhost){
+      bead._slideGhost.remove();
+      bead._slideGhost=null;
+    }
+    bead.style.visibility="";
+  }
+
+  function playBeadSlides(slides){
+    slides.forEach(item => {
+      const {bead,ghost,oldRect,oldOpacity}=item;
+      const finalRect=bead.getBoundingClientRect();
+      const finalStyle=getComputedStyle(bead);
+      const finalOpacity=parseFloat(finalStyle.opacity);
+
+      const oldCx=oldRect.left+oldRect.width/2;
+      const oldCy=oldRect.top+oldRect.height/2;
+      const newCx=finalRect.left+finalRect.width/2;
+      const newCy=finalRect.top+finalRect.height/2;
+      const dx=newCx-oldCx;
+      const dy=newCy-oldCy;
+      const endScale=oldRect.width>0 ? finalRect.width/oldRect.width : 1;
+      const safeFinalOpacity=Number.isFinite(finalOpacity) ? finalOpacity : 1;
+
+      ghost.classList.add("bead-slide-ghost");
+      ghost.classList.remove("drag-source","drag-cue","inactive-start");
+      ghost.style.left=`${oldRect.left}px`;
+      ghost.style.top=`${oldRect.top}px`;
+      ghost.style.width=`${oldRect.width}px`;
+      ghost.style.height=`${oldRect.height}px`;
+      ghost.style.setProperty("transform","none","important");
+      ghost.style.opacity=String(oldOpacity);
+      document.body.appendChild(ghost);
+      bead._slideGhost=ghost;
+
+      // La vraie boule garde déjà sa place finale dans la mise en page, mais
+      // reste cachée pendant que sa copie glisse visuellement jusqu'à elle.
+      bead.style.visibility="hidden";
+
+      const midScale=Math.max(.82,Math.min(1.03,(1+endScale)/2*.90));
+      const midOpacity=Math.max(.42,(oldOpacity+safeFinalOpacity)/2);
+
+      const anim=ghost.animate([
+        {transform:"translate(0px,0px) scale(1)",opacity:oldOpacity,offset:0},
+        {transform:`translate(${dx*.52}px,${dy*.52}px) scale(${midScale})`,opacity:midOpacity,offset:.52},
+        {transform:`translate(${dx}px,${dy}px) scale(${endScale})`,opacity:safeFinalOpacity,offset:1}
+      ],{
+        duration:280,
+        easing:"cubic-bezier(.22,.72,.2,1)",
+        fill:"forwards"
+      });
+
+      bead._slideAnimation=anim;
+      const finish=() => {
+        if(bead._slideGhost===ghost){
+          ghost.remove();
+          bead._slideGhost=null;
+        }
+        bead.style.visibility="";
+        bead._slideAnimation=null;
+      };
+      anim.onfinish=finish;
+      anim.oncancel=finish;
+    });
+  }
+
   function renderBeads(displayed){
     const visible = clamp(displayed,0,100);
+    const previousVisible = lastRenderedVisible;
+    const slides=[];
 
     document.querySelectorAll(".row").forEach(row => {
       const decade = Number(row.dataset.decade);
@@ -1412,6 +1571,21 @@
 
       beads.forEach((bead,index) => {
         const n = Number(bead.dataset.absolute);
+        const wasSelected = previousVisible !== null && n <= previousVisible;
+        const isSelected = n <= visible;
+        if(previousVisible !== null && wasSelected !== isSelected){
+          cleanBeadSlide(bead);
+          const oldRect=bead.getBoundingClientRect();
+          const oldStyle=getComputedStyle(bead);
+          const ghost=bead.cloneNode(false);
+          slides.push({
+            bead,
+            ghost,
+            oldRect,
+            oldOpacity:Number.isFinite(parseFloat(oldStyle.opacity)) ? parseFloat(oldStyle.opacity) : 1
+          });
+        }
+
         bead.classList.remove("active","fixed","added","removed","not-base","inactive-start");
 
         // Crée l'espace central : actives à gauche, inactives à droite.
@@ -1436,6 +1610,18 @@
         }
       });
     });
+
+    lastRenderedVisible = visible;
+
+    // Laisse le navigateur appliquer le nouveau regroupement gauche/droite,
+    // puis fait glisser visuellement chaque boule modifiée jusqu'à sa nouvelle place.
+    if(slides.length){
+      requestAnimationFrame(() => playBeadSlides(slides));
+    }
+
+    // Après le placement des groupes gauche/droite, mesure la géométrie
+    // réelle des boules pour positionner le repère avec précision.
+    requestAnimationFrame(() => updateFiveGuide(visible));
   }
 
   function render(shouldScroll=true){
@@ -1465,7 +1651,6 @@
     }
 
     renderBeads(displayed);
-    followDecadeFocus(displayed);
     applyDecadeFocus();
     answerTens.textContent = answer.tens;
     answerUnits.textContent = answer.units;
@@ -1482,19 +1667,11 @@
   }
 
   function scheduleScrollToValue(v){
+    // Aucun défilement automatique quand la valeur change.
+    // Le boulier ne se recentre que lors d'une action explicite sur le focus
+    // (clic sur une dizaine) ou lorsque le slider des dizaines déplace
+    // effectivement cette fenêtre de focus.
     clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => {
-      v = clamp(v,0,100);
-      const valueDecade = v===0 ? 1 : Math.ceil(v/10);
-      // En mode focus, la vue reste centrée sur la ligne de focus tant que
-      // l'on travaille dans ses trois lignes. followDecadeFocus() aura déjà
-      // déplacé focusedDecade si la valeur est réellement sortie de la fenêtre.
-      const decade = focusedDecade !== null ? focusedDecade : valueDecade;
-      const row = abacus.querySelector(`[data-decade="${decade}"]`);
-      if(!row) return;
-      const top = row.offsetTop-(abacus.clientHeight-row.clientHeight)/2;
-      abacus.scrollTo({top,behavior:"smooth"});
-    },90);
   }
 
   function setSelectedTick(ruler,step){
@@ -1552,6 +1729,11 @@
         }else{
           setCurrentTarget(startValue+step*10,false);
         }
+        // Le focus ne suit le nombre QUE lors d'une manipulation
+        // du slider vertical des dizaines. Les boules et les unités
+        // peuvent ainsi être manipulées sans perdre le contexte visuel.
+        followDecadeFocus(currentTarget());
+        applyDecadeFocus();
         setSelectedTick(tensRuler,shownStep);
       }else if(mode === "calc" && baseValue !== null){
         shownStep=calcTensDelta/10;
@@ -1582,6 +1764,8 @@
       }else{
         setCurrentTarget(currentTarget()+delta);
       }
+      followDecadeFocus(currentTarget());
+      applyDecadeFocus();
     });
   }
 
@@ -2053,6 +2237,10 @@
   syncNumberVisibilityButton();
   buildRulers();
   buildAbacus();
+  window.addEventListener("resize",() => {
+    fiveGuideX = null;
+    requestAnimationFrame(() => updateFiveGuide(clamp(currentTarget(),0,100)));
+  });
   setupTensDrag();
   setupUnitsDrag();
   setupBeadDrag();
