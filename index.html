@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <meta name="theme-color" content="#f4f1ea" />
-  <title>Boulier pédagogique 0–100 · v35</title>
+  <title>Boulier pédagogique 0–100 · v36</title>
   <style>
     :root{
       --paper:#f4f1ea;
@@ -85,10 +85,12 @@
       justify-content:center;
       gap:3px;
       min-width:0;
+      width:100%;
       padding:3px;
       border-radius:12px;
       background:rgba(105,114,108,.13);
       border:1px solid rgba(51,63,57,.08);
+      box-shadow:0 3px 10px rgba(22,30,40,.06);
     }
     .work-mode-switch button{
       min-height:32px;
@@ -959,7 +961,7 @@
       body{overflow:auto}
       .app{height:auto;min-height:100dvh;padding:8px}
       .topbar{min-height:30px;flex-wrap:wrap}
-      .work-mode-switch{order:3;width:100%}
+      .work-mode-switch{width:100%}
       .work-mode-switch button{flex:1 1 0;padding:5px 4px;font-size:11px}
       .top-note{display:none}
       .main-layout{
@@ -1021,9 +1023,15 @@
          directement des éléments de la grille principale. */
       .left-panel{display:contents}
 
-      .slate{
+      .work-mode-switch{
         grid-column:1 / -1;
         grid-row:1;
+        width:100%;
+        justify-self:start;
+      }
+      .slate{
+        grid-column:1 / -1;
+        grid-row:2;
         width:100%;
         min-height:126px;
         padding-top:7px;
@@ -1046,12 +1054,12 @@
 
       .tens-control{
         grid-column:1;
-        grid-row:2;
+        grid-row:3;
         min-height:0;
       }
       .abacus-card{
         grid-column:2;
-        grid-row:2;
+        grid-row:3;
         margin-top:0;
         min-height:0;
       }
@@ -1061,15 +1069,15 @@
       }
       .units-panel{
         grid-column:1 / -1;
-        grid-row:3;
+        grid-row:4;
       }
       .keypad{
         grid-column:1 / -1;
-        grid-row:4;
+        grid-row:5;
       }
       .calc-actions{
         grid-column:1 / -1;
-        grid-row:5;
+        grid-row:6;
         margin-top:0;
       }
     }
@@ -1095,7 +1103,7 @@
       .app{height:auto;min-height:100dvh;padding:8px}
       .main-layout{
         grid-template-columns:62px minmax(0,1fr);
-        grid-template-rows:auto 430px 54px auto auto;
+        grid-template-rows:auto auto 430px 54px auto auto;
         column-gap:5px;
       }
       .slate{
@@ -1141,12 +1149,7 @@
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="title">Boulier 0–100 <span class="version-badge">v35</span></div>
-    <nav class="work-mode-switch" id="workModeSwitch" aria-label="Ordre de travail">
-      <button type="button" class="active" data-work-mode="together" aria-pressed="true">En même temps</button>
-      <button type="button" data-work-mode="beads-first" aria-pressed="false">Boulier d’abord</button>
-      <button type="button" data-work-mode="writing-first" aria-pressed="false">Écriture d’abord</button>
-    </nav>
+    <div class="title">Boulier 0–100 <span class="version-badge">v36</span></div>
     <div class="top-actions">
       <button
         class="number-visibility-button"
@@ -1167,6 +1170,11 @@
 
   <main class="main-layout">
     <section class="left-panel">
+          <nav class="work-mode-switch" id="workModeSwitch" aria-label="Ordre de travail">
+      <button type="button" class="active" data-work-mode="together" aria-pressed="true">En même temps</button>
+      <button type="button" data-work-mode="beads-first" aria-pressed="false">Boulier d’abord</button>
+      <button type="button" data-work-mode="writing-first" aria-pressed="false">Écriture d’abord</button>
+    </nav>
       <section class="slate" id="slate" aria-label="Ardoise du nombre et du calcul">
         <div class="slate-label" id="slateLabel">Nombre</div>
         <div
