@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <meta name="theme-color" content="#f4f1ea" />
-  <title>Boulier pédagogique 0–100 · v34</title>
+  <title>Boulier pédagogique 0–100 · v35</title>
   <style>
     :root{
       --paper:#f4f1ea;
@@ -48,6 +48,8 @@
     }
 
     .topbar{
+      position:relative;
+      z-index:30;
       flex:0 0 auto;
       min-height:32px;
       display:flex;
@@ -77,6 +79,37 @@
       gap:7px;
       flex:0 0 auto;
     }
+    .work-mode-switch{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:3px;
+      min-width:0;
+      padding:3px;
+      border-radius:12px;
+      background:rgba(105,114,108,.13);
+      border:1px solid rgba(51,63,57,.08);
+    }
+    .work-mode-switch button{
+      min-height:32px;
+      border:0;
+      border-radius:9px;
+      padding:5px 10px;
+      background:transparent;
+      color:#52605a;
+      font-size:12px;
+      line-height:1.05;
+      font-weight:850;
+      cursor:pointer;
+      white-space:nowrap;
+      touch-action:manipulation;
+    }
+    .work-mode-switch button.active{
+      background:#fff;
+      color:#26352e;
+      box-shadow:0 2px 8px rgba(22,30,40,.12);
+    }
+    .work-mode-switch button:focus-visible{outline:3px solid #93c5fd;outline-offset:1px}
     .number-visibility-button{
       min-width:76px;
       height:34px;
@@ -213,7 +246,7 @@
       animation:blink 1s steps(1) infinite;
     }
     @keyframes blink{50%{opacity:0}}
-    .number-display.invalid{animation:shake .16s linear 0s 2}
+    .number-display.invalid,.operation-expression.invalid{animation:shake .16s linear 0s 2}
     @keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 
     .operation-panel{
@@ -245,7 +278,21 @@
       flex:0 0 auto;
       min-width:.62em;
       margin-right:4px;
+      padding:0;
+      border:0;
+      background:transparent;
+      color:inherit;
+      font:inherit;
+      line-height:1;
       text-align:right;
+      cursor:pointer;
+      border-radius:8px;
+    }
+    .operation-prefix:focus-visible{outline:2px solid rgba(255,251,225,.72);outline-offset:2px}
+    .operation-expression.entry-active, .number-display.entry-active{
+      box-shadow:inset 0 0 0 2px rgba(244,241,218,.42);
+      background:rgba(255,255,255,.025);
+      border-radius:9px;
     }
     .operation-places{
       display:grid;
@@ -266,12 +313,29 @@
       box-shadow:0 1px 0 rgba(255,255,255,.18);
     }
     .answer-row{
-      display:flex;
+      display:none;
       align-items:flex-end;
       justify-content:flex-end;
       gap:var(--answer-gap);
       padding:0 var(--answer-pad);
     }
+    .slate.answering .answer-row{display:flex}
+    .respond-button{
+      display:none;
+      margin:2px auto 9px;
+      min-width:120px;
+      min-height:38px;
+      border:2px solid rgba(244,241,218,.46);
+      border-radius:11px;
+      background:rgba(255,255,255,.07);
+      color:var(--chalk);
+      font-weight:900;
+      cursor:pointer;
+      touch-action:manipulation;
+    }
+    .respond-button.show{display:block}
+    .respond-button:hover{background:rgba(255,255,255,.12)}
+    .respond-button:focus-visible{outline:3px solid rgba(255,251,225,.35);outline-offset:2px}
     .answer-column{
       display:grid;
       justify-items:center;
@@ -318,7 +382,7 @@
     }
 
     .keypad{
-      display:none;
+      display:grid;
       grid-template-columns:repeat(3,1fr);
       gap:6px;
       padding:7px;
@@ -327,7 +391,6 @@
       border:1px solid rgba(23,32,42,.08);
       box-shadow:var(--shadow);
     }
-    .keypad.show{display:grid}
     .keypad button{
       height:43px;
       border:0;
@@ -352,6 +415,18 @@
     .keypad .verify-key.correct{background:#287a43}
     .keypad .verify-key.incorrect{background:#a33d37}
     .keypad .verify-key.incomplete{background:#756b58}
+    .keypad .verify-key:disabled{
+      background:#a8aea9;
+      color:#eef0ee;
+      cursor:default;
+      box-shadow:none;
+      opacity:.82;
+    }
+    .calc-trigger:disabled{
+      opacity:.46;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
 
     .calc-actions{
       margin-top:auto;
@@ -883,7 +958,9 @@
     @media (max-width:760px){
       body{overflow:auto}
       .app{height:auto;min-height:100dvh;padding:8px}
-      .topbar{min-height:30px}
+      .topbar{min-height:30px;flex-wrap:wrap}
+      .work-mode-switch{order:3;width:100%}
+      .work-mode-switch button{flex:1 1 0;padding:5px 4px;font-size:11px}
       .top-note{display:none}
       .main-layout{
         display:grid;
@@ -1064,7 +1141,12 @@
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="title">Boulier 0–100 <span class="version-badge">v34</span></div>
+    <div class="title">Boulier 0–100 <span class="version-badge">v35</span></div>
+    <nav class="work-mode-switch" id="workModeSwitch" aria-label="Ordre de travail">
+      <button type="button" class="active" data-work-mode="together" aria-pressed="true">En même temps</button>
+      <button type="button" data-work-mode="beads-first" aria-pressed="false">Boulier d’abord</button>
+      <button type="button" data-work-mode="writing-first" aria-pressed="false">Écriture d’abord</button>
+    </nav>
     <div class="top-actions">
       <button
         class="number-visibility-button"
@@ -1102,13 +1184,14 @@
 
         <div class="operation-panel" id="operationPanel">
           <div class="operation-expression" id="operationExpression" aria-label="Calcul en cours">
-            <span class="operation-prefix" id="operationPrefix">+</span>
+            <button type="button" class="operation-prefix" id="operationPrefix" aria-label="Changer le signe" title="Changer + / −">+</button>
             <span class="operation-places" aria-hidden="true">
               <span class="operation-place" id="operationTens"></span>
               <span class="operation-place" id="operationUnits">0</span>
             </span>
           </div>
           <div class="written-line"></div>
+          <button class="respond-button" id="respondButton" type="button">Répondre</button>
           <div class="answer-row" aria-label="Réponse chiffre par chiffre">
             <div class="answer-column">
               <div class="answer-tag">D</div>
@@ -1213,6 +1296,9 @@
   const unitsRuler = document.getElementById("unitsRuler");
   const fingerValue = document.getElementById("fingerValue");
   const fullscreenButton = document.getElementById("fullscreenButton");
+  const workModeSwitch = document.getElementById("workModeSwitch");
+  const workModeButtons = [...workModeSwitch.querySelectorAll("[data-work-mode]")];
+  const respondButton = document.getElementById("respondButton");
 
   let mode = "number";
   let value = 0;
@@ -1231,6 +1317,12 @@
   // ses deux voisines, afin de garder lisible un passage de dizaine.
   let focusFollowValue = null;
   let lastRenderedVisible = null;
+  let workMode = "together";
+  let numberEntry = "0";
+  let calcEntryMagnitude = "0";
+  let calcEntrySign = 1;
+  let representationVerified = true;
+  let responseMode = false;
 
   const hues = [2,27,49,92,150,184,215,248,290,332];
 
@@ -1373,17 +1465,38 @@
       : value;
   }
 
+  function markRepresentationDirty(){
+    if(workMode === "together"){
+      representationVerified = true;
+      return;
+    }
+    representationVerified = false;
+    if(responseMode){
+      responseMode=false;
+      activeAnswer=null;
+      answer.tens="";
+      answer.units="";
+    }
+  }
+
   function setCurrentTarget(next,shouldScroll=true){
-    // En mode Nombre, le geste déplace directement le nombre affiché.
     next = clamp(Math.round(next),0,100);
     value = next;
-    numberBuffer = String(next);
+    if(mode === "number" && workMode === "together"){
+      numberEntry = String(next);
+      numberBuffer = numberEntry;
+      representationVerified = true;
+    }else{
+      markRepresentationDirty();
+    }
+    clearVerification();
     render(shouldScroll);
   }
 
   function setCalcComponent(kind,delta,shouldScroll=true){
     if(mode !== "calc" || baseValue === null) return;
     clearVerification();
+    if(workMode !== "together") markRepresentationDirty();
 
     if(kind === "tens"){
       let step = clamp(Math.round(delta/10),-10,10);
@@ -1416,20 +1529,40 @@
     return kind === "tens" ? calcTensDelta : calcUnitsDelta;
   }
 
+  function actualCalculationDelta(){
+    return calcTensDelta + calcUnitsDelta;
+  }
+
+  function enteredCalculationDelta(){
+    if(calcEntryMagnitude === "") return null;
+    return calcEntrySign * Number(calcEntryMagnitude || 0);
+  }
+
   function calculationText(){
-    const delta = calcTensDelta + calcUnitsDelta;
+    const delta = workMode === "together" ? actualCalculationDelta() : enteredCalculationDelta();
+    if(delta === null) return "Calcul à écrire";
     return delta >= 0 ? `+${delta}` : `−${Math.abs(delta)}`;
   }
 
   function renderOperationExpression(){
-    const delta = calcTensDelta + calcUnitsDelta;
+    const delta = workMode === "together" ? actualCalculationDelta() : enteredCalculationDelta();
+    if(workMode === "together" && delta !== null){
+      calcEntrySign = delta < 0 ? -1 : 1;
+      calcEntryMagnitude = String(Math.abs(delta));
+    }
+    if(delta === null){
+      operationPrefix.textContent = calcEntrySign >= 0 ? "+" : "−";
+      operationTens.textContent = "";
+      operationUnits.textContent = "?";
+      operationExpression.setAttribute("aria-label","Calcul à écrire");
+      return;
+    }
     const absolute = Math.abs(delta);
     const digits = String(absolute);
     const lastTwo = digits.padStart(2,"0").slice(-2);
     const leading = digits.length > 2 ? digits.slice(0,-2) : "";
 
     operationPrefix.textContent = (delta >= 0 ? "+" : "−") + leading;
-    // Pour +4, la colonne D reste vide et le 4 tombe exactement au-dessus de U.
     operationTens.textContent = absolute < 10 ? "" : lastTwo[0];
     operationUnits.textContent = lastTwo[1];
     operationExpression.setAttribute("aria-label",calculationText());
@@ -1630,24 +1763,40 @@
     tensKnob.setAttribute("aria-valuenow",displayed);
     unitsKnob.setAttribute("aria-valuenow",displayed);
 
+    workModeButtons.forEach(btn => {
+      const active=btn.dataset.workMode===workMode;
+      btn.classList.toggle("active",active);
+      btn.setAttribute("aria-pressed",String(active));
+    });
+
+    slate.classList.toggle("answering",mode==="calc" && responseMode);
+    numberDisplay.classList.toggle("entry-active",mode==="number" && workMode!=="together");
+    operationExpression.classList.toggle("entry-active",mode==="calc" && !responseMode && workMode!=="together");
+
     if(mode === "number"){
       slate.classList.remove("calculating");
-      slateLabel.textContent = "Nombre";
-      numberDisplay.textContent = numberHidden ? "?" : displayed;
+      slateLabel.textContent = workMode === "beads-first" ? "Quel nombre ?" : (workMode === "writing-first" ? "Nombre à construire" : "Nombre");
+      const shownNumber = workMode === "together" ? String(displayed) : (numberEntry === "" ? "?" : numberEntry);
+      numberDisplay.textContent = numberHidden ? "?" : shownNumber;
       numberDisplay.setAttribute("aria-valuenow",displayed);
       calcTrigger.textContent = "Calcul";
       calcTrigger.classList.remove("secondary");
+      calcTrigger.disabled = workMode !== "together" && !representationVerified;
       baseResetButton.classList.remove("show");
+      respondButton.classList.remove("show");
     }else{
       slate.classList.add("calculating");
-      slateLabel.textContent = "Nombre";
+      slateLabel.textContent = "Nombre de départ";
       numberDisplay.textContent = numberHidden ? "?" : baseValue;
       numberDisplay.classList.remove("editing");
       numberDisplay.setAttribute("aria-valuenow",baseValue);
       renderOperationExpression();
       calcTrigger.textContent = "Terminer";
       calcTrigger.classList.add("secondary");
+      calcTrigger.disabled = false;
       baseResetButton.classList.add("show");
+      const canRespond = workMode === "together" || representationVerified;
+      respondButton.classList.toggle("show",canRespond && !responseMode);
     }
 
     renderBeads(displayed);
@@ -1663,6 +1812,7 @@
       if(row) row.classList.add("current");
     }
 
+    syncVerifyButton();
     if(shouldScroll) scheduleScrollToValue(displayed);
   }
 
@@ -1834,6 +1984,7 @@
   function setTargetFromBead(desired,shouldScroll=false){
     desired = clamp(Math.round(desired),0,100);
     clearVerification();
+    if(workMode !== "together") markRepresentationDirty();
 
     if(mode !== "calc" || baseValue === null){
       setCurrentTarget(desired,shouldScroll);
@@ -1955,41 +2106,214 @@
     setTimeout(() => numberDisplay.classList.remove("invalid"),350);
   }
 
-  function handleNumberDigit(digit){
-    if(mode !== "number") return;
-    let candidate;
-    if(numberTypingFresh || numberBuffer === "0") candidate = digit;
-    else candidate = numberBuffer + digit;
+  function flashInvalidOperation(){
+    operationExpression.classList.remove("invalid");
+    void operationExpression.offsetWidth;
+    operationExpression.classList.add("invalid");
+    setTimeout(() => operationExpression.classList.remove("invalid"),350);
+  }
 
-    candidate = candidate.replace(/^0+(?=\d)/,"");
-    const n = Number(candidate);
-    if(!Number.isInteger(n) || n<0 || n>100){
-      flashInvalidNumber();
+  function clearVerification(){
+    answerTens.classList.remove("correct","incorrect");
+    answerUnits.classList.remove("correct","incorrect");
+    verifyButton.classList.remove("correct","incorrect","incomplete");
+  }
+
+  function syncVerifyButton(){
+    clearVerification();
+    if(mode === "calc" && responseMode){
+      verifyButton.disabled=false;
+      verifyButton.textContent="Vérifier la réponse";
       return;
     }
+    if(workMode === "together"){
+      verifyButton.disabled=true;
+      verifyButton.textContent="✓ Synchronisé";
+      return;
+    }
+    verifyButton.disabled=false;
+    verifyButton.textContent=representationVerified ? "✓ Correspond" : "Vérifier";
+    if(representationVerified) verifyButton.classList.add("correct");
+  }
+
+  function resetRepresentationForWorkMode(){
+    representationVerified = workMode === "together";
+    responseMode=false;
+    activeAnswer=null;
+    answer.tens="";
+    answer.units="";
+    answerTens.classList.remove("active","correct","incorrect");
+    answerUnits.classList.remove("active","correct","incorrect");
+    clearVerification();
+
+    if(mode === "number"){
+      numberEntry = workMode === "together" ? String(value) : "";
+      numberBuffer = numberEntry || "0";
+      numberTypingFresh=true;
+    }else{
+      const actual=actualCalculationDelta();
+      calcEntrySign = actual < 0 ? -1 : 1;
+      calcEntryMagnitude = workMode === "together" ? String(Math.abs(actual)) : "";
+    }
+  }
+
+  function setWorkMode(next){
+    if(!["together","beads-first","writing-first"].includes(next) || next===workMode) return;
+    leaveNumberEditing();
+    workMode=next;
+    resetRepresentationForWorkMode();
+    render(false);
+  }
+
+  workModeSwitch.addEventListener("click",e => {
+    const btn=e.target.closest("[data-work-mode]");
+    if(btn) setWorkMode(btn.dataset.workMode);
+  });
+
+  function numberCandidateWithDigit(digit){
+    let current = workMode === "together" ? numberBuffer : numberEntry;
+    if(numberTypingFresh || current === "" || current === "0") current=digit;
+    else current+=digit;
+    current=current.replace(/^0+(?=\d)/,"");
+    return current;
+  }
+
+  function handleNumberDigit(digit){
+    if(mode !== "number") return;
+    const candidate=numberCandidateWithDigit(digit);
+    const n=Number(candidate);
+    if(!Number.isInteger(n) || n<0 || n>100){ flashInvalidNumber(); return; }
     numberTypingFresh=false;
-    numberBuffer=String(n);
-    setCurrentTarget(n);
+    if(workMode === "together"){
+      numberBuffer=String(n);
+      numberEntry=numberBuffer;
+      setCurrentTarget(n,false);
+    }else{
+      numberEntry=String(n);
+      numberBuffer=numberEntry;
+      markRepresentationDirty();
+      clearVerification();
+      render(false);
+    }
   }
 
   function handleNumberBackspace(){
     if(mode !== "number") return;
     numberTypingFresh=false;
-    numberBuffer = numberBuffer.length>1 ? numberBuffer.slice(0,-1) : "0";
-    setCurrentTarget(Number(numberBuffer));
+    if(workMode === "together"){
+      numberBuffer=numberBuffer.length>1 ? numberBuffer.slice(0,-1) : "0";
+      numberEntry=numberBuffer;
+      setCurrentTarget(Number(numberBuffer),false);
+    }else{
+      numberEntry=numberEntry.length>1 ? numberEntry.slice(0,-1) : "";
+      numberBuffer=numberEntry || "0";
+      markRepresentationDirty();
+      clearVerification();
+      render(false);
+    }
   }
+
+  function clearNumberEntry(){
+    if(workMode === "together"){
+      numberBuffer="0"; numberEntry="0"; numberTypingFresh=true;
+      setCurrentTarget(0,false);
+    }else{
+      numberEntry=""; numberBuffer="0"; numberTypingFresh=true;
+      markRepresentationDirty(); clearVerification(); render(false);
+    }
+  }
+
+  function operationMagnitudeCandidate(digit){
+    let cur=calcEntryMagnitude;
+    if(cur==="" || cur==="0") cur=digit; else cur+=digit;
+    cur=cur.replace(/^0+(?=\d)/,"");
+    return cur;
+  }
+
+  function applyActualCalculationDelta(delta){
+    if(mode!=="calc" || baseValue===null) return false;
+    const target=baseValue+delta;
+    if(target<0 || target>100) return false;
+    const tens = delta>=0 ? Math.floor(delta/10)*10 : Math.ceil(delta/10)*10;
+    const units=delta-tens;
+    if(tens < -100 || tens > 100 || units < -9 || units > 9) return false;
+    calcTensDelta=tens;
+    calcUnitsDelta=units;
+    value=currentTarget();
+    representationVerified=true;
+    clearVerification();
+    render(false);
+    return true;
+  }
+
+  function handleCalcDigit(digit){
+    if(mode!=="calc" || responseMode) return;
+    const candidate=operationMagnitudeCandidate(digit);
+    const magnitude=Number(candidate);
+    if(!Number.isInteger(magnitude) || magnitude>100){ flashInvalidOperation(); return; }
+    const delta=calcEntrySign*magnitude;
+    if(baseValue+delta<0 || baseValue+delta>100){ flashInvalidOperation(); return; }
+    calcEntryMagnitude=String(magnitude);
+    clearVerification();
+    if(workMode==="together"){
+      applyActualCalculationDelta(delta);
+    }else{
+      markRepresentationDirty();
+      render(false);
+    }
+  }
+
+  function handleCalcBackspace(){
+    if(mode!=="calc" || responseMode) return;
+    calcEntryMagnitude=calcEntryMagnitude.length>1 ? calcEntryMagnitude.slice(0,-1) : "";
+    clearVerification();
+    if(workMode==="together"){
+      const mag=Number(calcEntryMagnitude||0);
+      if(!applyActualCalculationDelta(calcEntrySign*mag)) calcEntryMagnitude="0";
+    }else{
+      markRepresentationDirty();
+      render(false);
+    }
+  }
+
+  function clearCalcEntry(){
+    if(mode!=="calc" || responseMode) return;
+    calcEntryMagnitude="";
+    calcEntrySign=1;
+    clearVerification();
+    if(workMode==="together") applyActualCalculationDelta(0);
+    else { markRepresentationDirty(); render(false); }
+  }
+
+  function toggleCalcSign(){
+    if(mode!=="calc" || responseMode) return;
+    const nextSign=calcEntrySign*-1;
+    const mag=workMode==="together" ? Math.abs(actualCalculationDelta()) : Number(calcEntryMagnitude||0);
+    const delta=nextSign*mag;
+    if(baseValue+delta<0 || baseValue+delta>100){ flashInvalidOperation(); return; }
+    calcEntrySign=nextSign;
+    clearVerification();
+    if(workMode==="together") applyActualCalculationDelta(delta);
+    else { markRepresentationDirty(); render(false); }
+  }
+
+  operationPrefix.addEventListener("click",toggleCalcSign);
+  operationExpression.setAttribute("tabindex","0");
+  operationExpression.addEventListener("keydown",e => {
+    if(mode!=="calc" || responseMode) return;
+    if(/^\d$/.test(e.key)){e.preventDefault();handleCalcDigit(e.key);}
+    else if(e.key==="Backspace"||e.key==="Delete"){e.preventDefault();handleCalcBackspace();}
+    else if(e.key==="+"||e.key==="-"){e.preventDefault(); if((e.key==="-"&&calcEntrySign>0)||(e.key==="+"&&calcEntrySign<0)) toggleCalcSign();}
+  });
 
   numberDisplay.addEventListener("pointerdown",e => {
     if(mode !== "number") return;
     if(numberHidden){
       numberHidden=false;
-      numberVisibilityButton.textContent="Masquer";
-      numberVisibilityButton.setAttribute("aria-pressed","false");
-      numberVisibilityButton.title="Masquer le nombre";
-      render(false);
+      syncNumberVisibilityButton();
     }
     numberTypingFresh=true;
-    numberBuffer=String(value);
+    numberBuffer=workMode==="together" ? String(value) : (numberEntry||"0");
     numberDisplay.classList.add("editing");
     numberDisplay.focus({preventScroll:true});
     e.preventDefault();
@@ -1997,82 +2321,75 @@
 
   numberDisplay.addEventListener("keydown",e => {
     if(mode !== "number") return;
-    if(/^\d$/.test(e.key)){
-      e.preventDefault();
-      handleNumberDigit(e.key);
-    }else if(e.key === "Backspace" || e.key === "Delete"){
-      e.preventDefault();
-      handleNumberBackspace();
-    }else if(e.key === "Enter" || e.key === "Escape"){
-      e.preventDefault();
-      leaveNumberEditing();
-      numberDisplay.blur();
-    }
+    if(/^\d$/.test(e.key)){e.preventDefault();handleNumberDigit(e.key);}
+    else if(e.key === "Backspace" || e.key === "Delete"){e.preventDefault();handleNumberBackspace();}
+    else if(e.key === "Enter" || e.key === "Escape"){e.preventDefault();leaveNumberEditing();numberDisplay.blur();}
   });
   numberDisplay.addEventListener("blur",leaveNumberEditing);
 
-  function clearVerification(){
-    answerTens.classList.remove("correct","incorrect");
-    answerUnits.classList.remove("correct","incorrect");
-    verifyButton.classList.remove("correct","incorrect","incomplete");
-    verifyButton.textContent = "Vérifier";
+  function verifyRepresentation(){
+    clearVerification();
+    if(workMode==="together") return true;
+    let ok=false;
+    if(mode==="number"){
+      if(numberEntry===""){verifyButton.classList.add("incomplete");verifyButton.textContent="Écris le nombre";return false;}
+      ok=Number(numberEntry)===value;
+    }else{
+      const entered=enteredCalculationDelta();
+      if(entered===null){verifyButton.classList.add("incomplete");verifyButton.textContent="Écris le calcul";return false;}
+      ok=entered===actualCalculationDelta();
+    }
+    representationVerified=ok;
+    verifyButton.classList.add(ok?"correct":"incorrect");
+    verifyButton.textContent=ok?"✓ Correct":"À revoir";
+    if(ok){
+      if(mode==="number") calcTrigger.disabled=false;
+      else respondButton.classList.add("show");
+    }else if(mode==="number"){
+      calcTrigger.disabled=true;
+    }
+    return ok;
   }
 
   function verifyAnswer(){
-    if(mode !== "calc") return;
+    if(mode !== "calc" || !responseMode) return;
     clearVerification();
-
-    const expectedNow = currentTarget();
-    if(expectedNow < 0 || expectedNow > 100){
-      verifyButton.classList.add("incomplete");
-      verifyButton.textContent = "Ajuste les unités";
+    const expectedNow=currentTarget();
+    if(expectedNow<0 || expectedNow>100){verifyButton.classList.add("incomplete");verifyButton.textContent="Ajuste les unités";return;}
+    if(answer.tens==="" || answer.units===""){
+      verifyButton.classList.add("incomplete");verifyButton.textContent="Complète la réponse";
+      if(answer.tens==="") answerTens.classList.add("incorrect");
+      if(answer.units==="") answerUnits.classList.add("incorrect");
       return;
     }
-
-    if(answer.tens === "" || answer.units === ""){
-      verifyButton.classList.add("incomplete");
-      verifyButton.textContent = "Complète la réponse";
-      if(answer.tens === "") answerTens.classList.add("incorrect");
-      if(answer.units === "") answerUnits.classList.add("incorrect");
-      return;
-    }
-
-    const entered = Number(answer.tens) * 10 + Number(answer.units);
-    const expected = currentTarget();
-    if(entered === expected){
-      answerTens.classList.add("correct");
-      answerUnits.classList.add("correct");
-      verifyButton.classList.add("correct");
-      verifyButton.textContent = "✓ Correct";
-    }else{
-      answerTens.classList.add("incorrect");
-      answerUnits.classList.add("incorrect");
-      verifyButton.classList.add("incorrect");
-      verifyButton.textContent = "À revoir";
-    }
+    const entered=Number(answer.tens)*10+Number(answer.units);
+    const ok=entered===expectedNow;
+    answerTens.classList.add(ok?"correct":"incorrect");
+    answerUnits.classList.add(ok?"correct":"incorrect");
+    verifyButton.classList.add(ok?"correct":"incorrect");
+    verifyButton.textContent=ok?"✓ Correct":"À revoir";
   }
 
   function setActiveAnswer(which){
-    if(mode !== "calc") return;
+    if(mode!=="calc" || !responseMode) return;
     activeAnswer=which;
     answerTens.classList.toggle("active",which==="tens");
     answerUnits.classList.toggle("active",which==="units");
-    keypad.classList.add("show");
-    const el = which==="tens" ? answerTens : answerUnits;
+    const el=which==="tens"?answerTens:answerUnits;
     el.focus({preventScroll:true});
   }
 
   function handleAnswerDigit(digit){
-    if(mode !== "calc" || !activeAnswer) return;
+    if(mode!=="calc" || !responseMode || !activeAnswer) return;
     clearVerification();
     answer[activeAnswer]=digit;
-    const next = activeAnswer==="tens" ? "units" : "tens";
+    const next=activeAnswer==="tens"?"units":"tens";
     render(false);
     setActiveAnswer(next);
   }
 
   function handleAnswerBackspace(){
-    if(mode !== "calc") return;
+    if(mode!=="calc" || !responseMode) return;
     clearVerification();
     if(!activeAnswer) setActiveAnswer("units");
     answer[activeAnswer]="";
@@ -2081,44 +2398,53 @@
 
   function clearAnswer(){
     clearVerification();
-    answer.tens="";
-    answer.units="";
+    answer.tens="";answer.units="";
     render(false);
     setActiveAnswer("tens");
   }
 
-  [answerTens,answerUnits].forEach((box,index) => {
-    const which=index===0 ? "tens" : "units";
-    box.addEventListener("pointerdown",e => {
-      setActiveAnswer(which);
-      e.preventDefault();
-    });
-    box.addEventListener("keydown",e => {
-      if(/^\d$/.test(e.key)){
-        e.preventDefault();
-        activeAnswer=which;
-        handleAnswerDigit(e.key);
-      }else if(e.key==="Backspace" || e.key==="Delete"){
-        e.preventDefault();
-        activeAnswer=which;
-        handleAnswerBackspace();
-      }
+  [answerTens,answerUnits].forEach((box,index)=>{
+    const which=index===0?"tens":"units";
+    box.addEventListener("pointerdown",e=>{setActiveAnswer(which);e.preventDefault();});
+    box.addEventListener("keydown",e=>{
+      if(!responseMode) return;
+      if(/^\d$/.test(e.key)){e.preventDefault();activeAnswer=which;handleAnswerDigit(e.key);}
+      else if(e.key==="Backspace"||e.key==="Delete"){e.preventDefault();activeAnswer=which;handleAnswerBackspace();}
     });
   });
 
-  keypad.addEventListener("pointerdown",e => {
-    const btn=e.target.closest("button");
-    if(btn) e.preventDefault();
-  });
-  keypad.addEventListener("click",e => {
-    const btn=e.target.closest("button");
-    if(!btn) return;
-    if(btn.dataset.digit !== undefined) handleAnswerDigit(btn.dataset.digit);
-    else if(btn.dataset.action === "backspace") handleAnswerBackspace();
-    else if(btn.dataset.action === "clear") clearAnswer();
-    else if(btn.dataset.action === "verify") verifyAnswer();
-  });
+  function activateResponse(){
+    if(mode!=="calc" || (workMode!=="together" && !representationVerified)) return;
+    responseMode=true;
+    answer.tens="";answer.units="";
+    clearVerification();
+    render(false);
+    setActiveAnswer("tens");
+  }
+  respondButton.addEventListener("click",activateResponse);
 
+  keypad.addEventListener("pointerdown",e=>{const btn=e.target.closest("button");if(btn)e.preventDefault();});
+  keypad.addEventListener("click",e=>{
+    const btn=e.target.closest("button");
+    if(!btn || btn.disabled) return;
+    if(btn.dataset.action==="verify"){
+      if(mode==="calc"&&responseMode) verifyAnswer(); else verifyRepresentation();
+      return;
+    }
+    if(btn.dataset.digit!==undefined){
+      if(mode==="number") handleNumberDigit(btn.dataset.digit);
+      else if(responseMode) handleAnswerDigit(btn.dataset.digit);
+      else handleCalcDigit(btn.dataset.digit);
+    }else if(btn.dataset.action==="backspace"){
+      if(mode==="number") handleNumberBackspace();
+      else if(responseMode) handleAnswerBackspace();
+      else handleCalcBackspace();
+    }else if(btn.dataset.action==="clear"){
+      if(mode==="number") clearNumberEntry();
+      else if(responseMode) clearAnswer();
+      else clearCalcEntry();
+    }
+  });
 
   function syncNumberVisibilityButton(){
     numberVisibilityButton.textContent = numberHidden ? "Afficher" : "Masquer";
@@ -2138,50 +2464,51 @@
     calcTensDelta=0;
     calcUnitsDelta=0;
     value=baseValue;
-    answer.tens="";
-    answer.units="";
-    activeAnswer=null;
+    responseMode=false;
+    answer.tens="";answer.units="";activeAnswer=null;
+    answerTens.classList.remove("active","correct","incorrect");
+    answerUnits.classList.remove("active","correct","incorrect");
+    representationVerified = workMode === "together";
     clearVerification();
-    keypad.classList.remove("show");
-    answerTens.classList.remove("active");
-    answerUnits.classList.remove("active");
-    render();
+    render(false);
   }
 
   baseResetButton.addEventListener("click",returnToBase);
 
   function startCalculation(){
+    if(workMode!=="together" && !representationVerified) return;
     leaveNumberEditing();
     mode="calc";
     baseValue=value;
     calcTensDelta=0;
     calcUnitsDelta=0;
-    answer.tens="";
-    answer.units="";
-    activeAnswer=null;
+    calcEntryMagnitude=workMode==="together" ? "0" : "";
+    calcEntrySign=1;
+    representationVerified=workMode==="together";
+    responseMode=false;
+    answer.tens="";answer.units="";activeAnswer=null;
     clearVerification();
-    keypad.classList.remove("show");
     answerTens.classList.remove("active");
     answerUnits.classList.remove("active");
-    render();
+    render(false);
   }
 
   function exitCalculation(){
     const result=clamp(currentTarget(),0,100);
     mode="number";
     baseValue=null;
-    calcTensDelta=0;
-    calcUnitsDelta=0;
+    calcTensDelta=0;calcUnitsDelta=0;
     value=result;
-    numberBuffer=String(result);
-    answer.tens="";
-    answer.units="";
-    activeAnswer=null;
+    responseMode=false;
+    answer.tens="";answer.units="";activeAnswer=null;
+    if(workMode==="together"){numberEntry=String(result);representationVerified=true;}
+    else {numberEntry="";representationVerified=false;}
+    numberBuffer=numberEntry||String(result);
+    numberTypingFresh=true;
     clearVerification();
-    keypad.classList.remove("show");
     answerTens.classList.remove("active");
     answerUnits.classList.remove("active");
-    render();
+    render(false);
   }
 
   calcTrigger.addEventListener("click",() => {
